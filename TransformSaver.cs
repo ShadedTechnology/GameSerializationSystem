@@ -9,7 +9,7 @@ using GameSerialization;
 
 public class TransformSaver : MonoBehaviour
 {
-    [SaveableProperty] TransformData transformData
+    [SaveableProperty] private TransformData transformData
     {
         get
         {

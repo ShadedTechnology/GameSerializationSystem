@@ -20,7 +20,7 @@ namespace GameSerialization
         public static implicit operator Vector3Data(Vector3 v) => new Vector3Data(v);
     }
 
-    public class Vector3Serializer : ISerializer
+    public class Vector3Serializer : ITypeSerializer
     {
         public object FromSerializable(object obj)
         {
@@ -54,7 +54,7 @@ namespace GameSerialization
         public static implicit operator QuaternionData(Quaternion q) => new QuaternionData(q);
     }
 
-    public class QuaternionSerializer : ISerializer
+    public class QuaternionSerializer : ITypeSerializer
     {
         public object FromSerializable(object obj)
         {
