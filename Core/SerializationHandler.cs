@@ -9,22 +9,22 @@ using UnityEngine;
 namespace GameSerialization
 {
     [Serializable]
-    public class GameSerializer : ISerializable
+    public class SerializerEnvelope : ISerializable
     {
-        private IDataCollector dataCollector;
+        private IDataSerializer dataSerializer;
         public SerializationInfo serializationInfo;
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            dataCollector.SaveDataToSerializer(info);
+            dataSerializer.SaveDataToSerializer(info);
         }
 
-        public GameSerializer(IDataCollector dataCollector)
+        public SerializerEnvelope(IDataSerializer dataSerializer)
         {
-            this.dataCollector = dataCollector;
+            this.dataSerializer = dataSerializer;
         }
 
-        public GameSerializer(SerializationInfo info, StreamingContext context)
+        public SerializerEnvelope(SerializationInfo info, StreamingContext context)
         {
             this.serializationInfo = info;
         }
@@ -41,7 +41,7 @@ namespace GameSerialization
             return (File.Exists(path));
         }
     
-        public static void SaveGame(string saveName, IDataCollector dataCollector)
+        public static void SaveGame(string saveName, IDataSerializer dataSerializer)
         {
             string path = Application.persistentDataPath + saveFolder;
             if (!Directory.Exists(path))
@@ -52,12 +52,12 @@ namespace GameSerialization
             using (FileStream fileStream = new FileStream(path, FileMode.Create))
             {
                 BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(fileStream, new GameSerializer(dataCollector));
+                formatter.Serialize(fileStream, new SerializerEnvelope(dataSerializer));
                 fileStream.Close();
             }
         }
 
-        public static void SaveGameAppend(string saveName, IDataCollector dataCollector)
+        public static void SaveGameAppend(string saveName, IDataSerializer dataSerializer)
         {
             string path = Application.persistentDataPath + saveFolder;
             if (!Directory.Exists(path))
@@ -68,12 +68,12 @@ namespace GameSerialization
             using (FileStream fileStream = new FileStream(path, FileMode.Append))
             {
                 BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(fileStream, new GameSerializer(dataCollector));
+                formatter.Serialize(fileStream, new SerializerEnvelope(dataSerializer));
                 fileStream.Close();
             }
         }
 
-        public static void LoadGame(string saveName, IDataCollector dataCollector)
+        public static void LoadGame(string saveName, IDataSerializer dataSerializer)
         {
             string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
             if (File.Exists(path))
@@ -81,8 +81,8 @@ namespace GameSerialization
                 using (FileStream fileStream = new FileStream(path, FileMode.Open))
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
-                    GameSerializer gameSerializer = (GameSerializer)formatter.Deserialize(fileStream);
-                    dataCollector.LoadDataFromSerializer(gameSerializer.serializationInfo);
+                    SerializerEnvelope serializerEnvelope = (SerializerEnvelope)formatter.Deserialize(fileStream);
+                    dataSerializer.LoadDataFromSerializer(serializerEnvelope.serializationInfo);
                     fileStream.Close();
                 }
             }

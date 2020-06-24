@@ -9,16 +9,16 @@ public class SavingManager : MonoBehaviour
     
     private void Start()
     {
-        serializableObjectContainer = new SerializableObjectsContainer().FindAllSerializableObjects();
+        serializableObjectContainer = GameDataCollector.FindAllSerializableObjects();
     }
 
     public void SaveGame(string saveName)
     {
-        SerializationHandler.SaveGame(saveName, new GameDataCollector(serializableObjectContainer));
+        SerializationHandler.SaveGame(saveName, new GameDataSerializer(serializableObjectContainer));
     }
 
     public void LoadGame(string saveName)
     {
-        SerializationHandler.LoadGame(saveName, new GameDataCollector(serializableObjectContainer));
+        SerializationHandler.LoadGame(saveName, new GameDataSerializer(serializableObjectContainer));
     }
 }
