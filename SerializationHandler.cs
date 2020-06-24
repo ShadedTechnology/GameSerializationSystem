@@ -12,237 +12,287 @@ using UnityEngine.SceneManagement;
 
 // made by Michał Warzecha 28.08.2019
 
-[AttributeUsage(AttributeTargets.Field, Inherited = false)]
-public class SaveableField : Attribute {}
-
-[AttributeUsage(AttributeTargets.Property, Inherited = false)]
-public class SaveableProperty : Attribute {}
-
-public interface IOnSaveGameMethod
+namespace GameSerialization
 {
-    void OnSaveGameMethod(SerializationInfo info);
-}
+    [AttributeUsage(AttributeTargets.Field, Inherited = false)]
+    public class SaveableField : Attribute {}
 
-public interface IOnLoadGameMethod
-{
-    void OnLoadGameMethod(SerializationInfo info);
-}
+    [AttributeUsage(AttributeTargets.Property, Inherited = false)]
+    public class SaveableProperty : Attribute {}
 
-static class TransformPathExtension
-{
-    public static string GetPath(this Transform current)
+    public interface IOnSaveGameMethod
     {
-        if (current.parent == null)
-            return "/" + current.name;
-        return current.parent.GetPath() + "/" + current.name;
-    }
-}
-
-public interface ISerializer
-{
-    object ToSerializable(object obj);
-    object FromSerializable(object obj);
-    Type GetSerializationType();
-}
-
-static class SerializationHelper
-{
-    public static Dictionary<Type, ISerializer> serializationDictionary = new Dictionary<Type, ISerializer>()
-    {
-        { typeof(Vector3), new Vector3Serializer()},
-        { typeof(Quaternion), new QuaternionSerializer()}
-    };
-
-    public static string GetComponentPath(MonoBehaviour component)
-    {
-        return component.transform.GetPath() + "/" + component.GetType().ToString();
+        void OnSaveGameMethod(SerializationInfo info);
     }
 
-    public static void SaveObject(SerializationInfo info, string id, object obj, Type type)
+    public interface IOnLoadGameMethod
     {
-        info.AddValue(id + "_type", type);
-        info.AddValue(id, obj);
+        void OnLoadGameMethod(SerializationInfo info);
     }
 
-    public static void LoadObject(SerializationInfo info, string id, Action<object> callback)
+    static class TransformPathExtension
     {
-        Type type = info.GetValue(id + "_type", typeof(Type)) as Type;
-        callback(info.GetValue(id, type));
-    }
-    
-}
-
-[Serializable]
-class GameSerializer : ISerializable
-{
-
-    private void IterateTroughComponents(Action<MonoBehaviour, string> onComponent,
-                                         Func<FieldInfo, string, MonoBehaviour, bool> onField,
-                                         Func<PropertyInfo, string, MonoBehaviour, bool> onProperty)
-    {
-        foreach (MonoBehaviour component in GameObject.FindObjectsOfType<MonoBehaviour>())
+        public static string GetPath(this Transform current)
         {
-            var fields = component.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance).Where(field => field.IsDefined(typeof(SaveableField), false)).ToArray();
-            var props = component.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Instance).Where(prop => prop.IsDefined(typeof(SaveableProperty), false)).ToArray();
-            string id = SerializationHelper.GetComponentPath(component);
-
-            onComponent.Invoke(component, id);
-
-            foreach (FieldInfo field in fields)
-            {
-                if(!onField.Invoke(field, id, component))
-                {
-                    Debug.LogError("Serialization error: " + id + " > Field \"" + field.Name + "\" cannot be serialized or deserialized");
-                }
-            }
-
-            foreach (PropertyInfo prop in props)
-            {
-                if(!onProperty.Invoke(prop, id, component))
-                {
-                    Debug.LogError("Serialization error: " + id + " > Property \"" + prop.Name + "\" cannot be serialized or deserialized");
-                }
-            }
+            if (current.parent == null)
+                return "/" + current.name;
+            return current.parent.GetPath() + "/" + current.name;
         }
     }
 
-    public void GetObjectData(SerializationInfo info, StreamingContext context)
+    public interface ISerializer
     {
-        info.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
-        Action<MonoBehaviour, string> onComponent = (MonoBehaviour component, string id) => {
-            if(component is IOnSaveGameMethod)
-            {
-                (component as IOnSaveGameMethod).OnSaveGameMethod(info);
-            }
-        };
-        Func<FieldInfo, string, MonoBehaviour, bool> onField = (field, id, component) => {
-            if (field.FieldType.IsSerializable)
-            {
-                info.AddValue(id + field.Name, field.GetValue(component));
-                return true;
-            }
-            if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ISerializer serializer))
-            {
-                info.AddValue(id + field.Name, serializer.ToSerializable(field.GetValue(component)));
-                return true;
-            }
-            return false;
-        };
-        Func<PropertyInfo, string, MonoBehaviour, bool> onProperty = (prop, id, component) => {
-            if (prop.PropertyType.IsSerializable)
-            {
-                info.AddValue(id + prop.Name, prop.GetValue(component));
-                return true;
-            }
-            if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ISerializer serializer))
-            {
-                info.AddValue(id + prop.Name, serializer.ToSerializable(prop.GetValue(component)));
-                return true;
-            }
-            return false;
-        };
-        IterateTroughComponents(onComponent, onField, onProperty);
+        object ToSerializable(object obj);
+        object FromSerializable(object obj);
+        Type GetSerializationType();
     }
 
-    public GameSerializer() { }
-
-    public GameSerializer(SerializationInfo info, StreamingContext context)
+    static class SerializationHelper
     {
-        Action<AsyncOperation> onSceneLoaded = (operation) =>
+        public static Dictionary<Type, ISerializer> serializationDictionary = new Dictionary<Type, ISerializer>()
         {
-            Action<MonoBehaviour, string> onComponent = (MonoBehaviour component, string id) =>
+            { typeof(Vector3), new Vector3Serializer()},
+            { typeof(Quaternion), new QuaternionSerializer()}
+        };
+
+        public static string GetComponentPath(MonoBehaviour component)
+        {
+            return component.transform.GetPath() + "/" + component.GetType().ToString();
+        }
+
+        public static void SaveObject(SerializationInfo info, string id, object obj, Type type)
+        {
+            info.AddValue(id + "_type", type);
+            info.AddValue(id, obj);
+        }
+
+        public static void LoadObject(SerializationInfo info, string id, Action<object> callback)
+        {
+            Type type = info.GetValue(id + "_type", typeof(Type)) as Type;
+            callback(info.GetValue(id, type));
+        }
+    
+    }
+
+    public struct FieldSerializationInfo
+    {
+        public string id;
+        public FieldInfo fieldInfo;
+        public MonoBehaviour component;
+        public Func<object> getSerializableObject;
+        public Func<SerializationInfo, object> getOriginalObject;
+    }
+
+    public struct PropertySerializationInfo
+    {
+        public string id;
+        public PropertyInfo propInfo;
+        public MonoBehaviour component;
+        public Func<object> getSerializableObject;
+        public Func<SerializationInfo, object> getOriginalObject;
+    }
+
+    public class GameSerializableObjectContainer
+    {
+        public List<IOnSaveGameMethod> OnSaveGameMethods { get; set; } = new List<IOnSaveGameMethod>();
+        public List<IOnLoadGameMethod> OnLoadGameMethods { get; set; } = new List<IOnLoadGameMethod>();
+        public List<FieldSerializationInfo> SerializableFields { get; set; } = new List<FieldSerializationInfo>();
+        public List<PropertySerializationInfo> SerializableProps { get; set; } = new List<PropertySerializationInfo>();
+
+        public GameSerializableObjectContainer FindAllSerializableObjects()
+        {
+            foreach (MonoBehaviour component in GameObject.FindObjectsOfType<MonoBehaviour>())
             {
+                var fields = component.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance).Where(field => field.IsDefined(typeof(SaveableField), false)).ToArray();
+                var props = component.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Instance).Where(prop => prop.IsDefined(typeof(SaveableProperty), false)).ToArray();
+                string id = SerializationHelper.GetComponentPath(component);
+
+                if (component is IOnSaveGameMethod)
+                {
+                    OnSaveGameMethods.Add((IOnSaveGameMethod)component);
+                }
                 if (component is IOnLoadGameMethod)
                 {
-                    (component as IOnLoadGameMethod).OnLoadGameMethod(info);
+                    OnLoadGameMethods.Add((IOnLoadGameMethod)component);
                 }
-            };
-            Func<FieldInfo, string, MonoBehaviour, bool> onField = (field, id, component) =>
-            {
-                if (field.FieldType.IsSerializable)
-                {
-                    field.SetValue(component, info.GetValue(id + field.Name, field.FieldType));
-                    return true;
-                }
-                if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ISerializer serializer))
-                {
-                    field.SetValue(component, serializer.FromSerializable(info.GetValue(id + field.Name, serializer.GetSerializationType())));
-                    return true;
-                }
-                return false;
-            };
-            Func<PropertyInfo, string, MonoBehaviour, bool> onProperty = (prop, id, component) =>
-            {
-                if (prop.PropertyType.IsSerializable)
-                {
-                    prop.SetValue(component, info.GetValue(id + prop.Name, prop.PropertyType));
-                    return true;
-                }
-                if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ISerializer serializer))
-                {
-                    prop.SetValue(component, serializer.FromSerializable(info.GetValue(id + prop.Name, serializer.GetSerializationType())));
-                    return true;
-                }
-                return false;
-            };
-            IterateTroughComponents(onComponent, onField, onProperty);
-        };
 
-        int sceneId = (int)info.GetValue("SceneManager_ActiveSceneId", typeof(int));
-        if(sceneId != SceneManager.GetActiveScene().buildIndex)
-        {
-            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneId);
-            asyncLoad.completed += onSceneLoaded;
-        } else
-        {
-            onSceneLoaded.Invoke(null);
-        }
-    }
-}
+                foreach (FieldInfo field in fields)
+                {
+                    string fieldId = id + field.Name;
+                    Func<object> getSerializableObject;
+                    Func<SerializationInfo, object> getOriginalObject;
+                    if (field.FieldType.IsSerializable)
+                    {
+                        getSerializableObject = () => { return field.GetValue(component); };
+                        getOriginalObject = (info) => { return info.GetValue(fieldId, field.FieldType); };
+                    }
+                    else if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ISerializer serializer))
+                    {
+                        getSerializableObject = () => { return serializer.ToSerializable(field.GetValue(component)); };
+                        getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(fieldId, serializer.GetSerializationType())); };
+                    }
+                    else
+                    {
+                        Debug.LogError("Serialization error: " + id + " > Field \"" + field.Name + "\" cannot be serialized or deserialized");
+                        continue;
+                    }
 
+                    SerializableFields.Add(new FieldSerializationInfo
+                    {
+                        id = fieldId,
+                        fieldInfo = field,
+                        component = component,
+                        getSerializableObject = getSerializableObject,
+                        getOriginalObject = getOriginalObject
+                    });
+                }
 
-public class SerializationHandler
-{
-    private const string saveFolder = "/GameSaves/";
+                foreach (PropertyInfo prop in props)
+                {
+                    string propId = id + prop.Name;
+                    Func<object> getSerializableObject;
+                    Func<SerializationInfo, object> getOriginalObject;
+                    if (prop.PropertyType.IsSerializable)
+                    {
+                        getSerializableObject = () => { return prop.GetValue(component); };
+                        getOriginalObject = (info) => { return info.GetValue(propId, prop.PropertyType); };
+                    }
+                    else if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ISerializer serializer))
+                    {
+                        getSerializableObject = () => { return serializer.ToSerializable(prop.GetValue(component)); };
+                        getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(propId, serializer.GetSerializationType())); };
+                    }
+                    else
+                    {
+                        Debug.LogError("Serialization error: " + id + " > Property \"" + prop.Name + "\" cannot be serialized or deserialized");
+                        continue;
+                    }
 
-    public static bool CheckIfSaveExists(string saveName)
-    {
-        string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
-        return (File.Exists(path));
-    }
-    
-    public static void SaveGame(string saveName)
-    {
-        string path = Application.persistentDataPath + saveFolder;
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
-        }
-        path += saveName + ".dat";
-        using (FileStream fileStream = new FileStream(path, FileMode.Create))
-        {
-            BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(fileStream, new GameSerializer());
-            fileStream.Close();
+                    SerializableProps.Add(new PropertySerializationInfo
+                    {
+                        id = propId,
+                        propInfo = prop,
+                        component = component,
+                        getSerializableObject = getSerializableObject,
+                        getOriginalObject = getOriginalObject
+                    });
+                }
+            }
+            return this;
         }
 
-    }
-
-    public static void LoadGame(string saveName)
-    {
-        string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
-        if (File.Exists(path))
+        public void LoadSceneFromGameSerializer(GameSerializer serializer)
         {
-            using (FileStream fileStream = new FileStream(path, FileMode.Open))
+            SerializationInfo info = serializer.serializationInfo;
+            Action<AsyncOperation> onSceneLoaded = (operation) =>
             {
-                BinaryFormatter formatter = new BinaryFormatter();
-                GameSerializer dict = (GameSerializer)formatter.Deserialize(fileStream);
-                fileStream.Close();
+                foreach (IOnLoadGameMethod onLoadGameMethod in OnLoadGameMethods)
+                {
+                    onLoadGameMethod.OnLoadGameMethod(info);
+                }
+                foreach (FieldSerializationInfo fieldSerializationInfo in SerializableFields)
+                {
+                    fieldSerializationInfo.fieldInfo.SetValue(fieldSerializationInfo.component, fieldSerializationInfo.getOriginalObject(info));
+                }
+                foreach (PropertySerializationInfo propSerializationInfo in SerializableProps)
+                {
+                    propSerializationInfo.propInfo.SetValue(propSerializationInfo.component, propSerializationInfo.getOriginalObject(info));
+                }
+            };
+
+            int sceneId = (int)info.GetValue("SceneManager_ActiveSceneId", typeof(int));
+            if (sceneId != SceneManager.GetActiveScene().buildIndex)
+            {
+                AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneId);
+                asyncLoad.completed += onSceneLoaded;
+            }
+            else
+            {
+                onSceneLoaded.Invoke(null);
             }
         }
-        else
+    }
+
+    [Serializable]
+    public class GameSerializer : ISerializable
+    {
+        private GameSerializableObjectContainer serializationContainer;
+        public SerializationInfo serializationInfo;
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            Debug.LogError("Loading data failed! File doesn't exists at path: " + path);
+            info.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
+            foreach(IOnSaveGameMethod onSaveGameMethod in serializationContainer.OnSaveGameMethods)
+            {
+                onSaveGameMethod.OnSaveGameMethod(info);
+            }
+            foreach(FieldSerializationInfo fieldSerializationInfo in serializationContainer.SerializableFields)
+            {
+                info.AddValue(fieldSerializationInfo.id, fieldSerializationInfo.getSerializableObject());
+            }
+            foreach (PropertySerializationInfo propSerializationInfo in serializationContainer.SerializableProps)
+            {
+                info.AddValue(propSerializationInfo.id, propSerializationInfo.getSerializableObject());
+            }
+        }
+
+        public GameSerializer(GameSerializableObjectContainer serializationContainer)
+        {
+            this.serializationContainer = serializationContainer;
+        }
+
+        public GameSerializer(SerializationInfo info, StreamingContext context)
+        {
+            this.serializationInfo = info;
         }
     }
+
+
+    public class SerializationHandler
+    {
+        private const string saveFolder = "/GameSaves/";
+
+        public static bool CheckIfSaveExists(string saveName)
+        {
+            string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
+            return (File.Exists(path));
+        }
+    
+        public static void SaveGame(string saveName, GameSerializableObjectContainer serializableObjects)
+        {
+            string path = Application.persistentDataPath + saveFolder;
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            path += saveName + ".dat";
+            using (FileStream fileStream = new FileStream(path, FileMode.Create))
+            {
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(fileStream, new GameSerializer(serializableObjects));
+                fileStream.Close();
+            }
+
+        }
+
+        public static void LoadGame(string saveName, GameSerializableObjectContainer serializableObjects)
+        {
+            string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
+            if (File.Exists(path))
+            {
+                using (FileStream fileStream = new FileStream(path, FileMode.Open))
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    GameSerializer gameSerializer = (GameSerializer)formatter.Deserialize(fileStream);
+                    serializableObjects.LoadSceneFromGameSerializer(gameSerializer);
+                    fileStream.Close();
+                }
+            }
+            else
+            {
+                Debug.LogError("Loading data failed! File doesn't exists at path: " + path);
+            }
+        }
+    }
+
 }
