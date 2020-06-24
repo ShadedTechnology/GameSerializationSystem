@@ -74,7 +74,7 @@ namespace GameSerialization
     
     }
 
-    public struct FieldSerializationInfo
+    public class FieldSerializationInfo
     {
         public string id;
         public FieldInfo fieldInfo;
@@ -83,7 +83,7 @@ namespace GameSerialization
         public Func<SerializationInfo, object> getOriginalObject;
     }
 
-    public struct PropertySerializationInfo
+    public class PropertySerializationInfo
     {
         public string id;
         public PropertyInfo propInfo;
@@ -98,6 +98,68 @@ namespace GameSerialization
         public List<IOnLoadGameMethod> OnLoadGameMethods { get; set; } = new List<IOnLoadGameMethod>();
         public List<FieldSerializationInfo> SerializableFields { get; set; } = new List<FieldSerializationInfo>();
         public List<PropertySerializationInfo> SerializableProps { get; set; } = new List<PropertySerializationInfo>();
+
+        private FieldSerializationInfo FieldToSerializationInfo(FieldInfo field, string id, MonoBehaviour component)
+        {
+            string fieldId = id + field.Name;
+            Func<object> getSerializableObject;
+            Func<SerializationInfo, object> getOriginalObject;
+            if (field.FieldType.IsSerializable)
+            {
+                getSerializableObject = () => { return field.GetValue(component); };
+                getOriginalObject = (info) => { return info.GetValue(fieldId, field.FieldType); };
+            }
+            else if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ISerializer serializer))
+            {
+                getSerializableObject = () => { return serializer.ToSerializable(field.GetValue(component)); };
+                getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(fieldId, serializer.GetSerializationType())); };
+            }
+            else
+            {
+                Debug.LogError("Serialization error: " + id + " > Field \"" + field.Name + "\" cannot be serialized or deserialized");
+                return null;
+            }
+
+            return new FieldSerializationInfo
+            {
+                id = fieldId,
+                fieldInfo = field,
+                component = component,
+                getSerializableObject = getSerializableObject,
+                getOriginalObject = getOriginalObject
+            };
+        }
+
+        private PropertySerializationInfo PropToSerializationInfo(PropertyInfo prop, string id, MonoBehaviour component)
+        {
+            string propId = id + prop.Name;
+            Func<object> getSerializableObject;
+            Func<SerializationInfo, object> getOriginalObject;
+            if (prop.PropertyType.IsSerializable)
+            {
+                getSerializableObject = () => { return prop.GetValue(component); };
+                getOriginalObject = (info) => { return info.GetValue(propId, prop.PropertyType); };
+            }
+            else if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ISerializer serializer))
+            {
+                getSerializableObject = () => { return serializer.ToSerializable(prop.GetValue(component)); };
+                getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(propId, serializer.GetSerializationType())); };
+            }
+            else
+            {
+                Debug.LogError("Serialization error: " + id + " > Property \"" + prop.Name + "\" cannot be serialized or deserialized");
+                return null;
+            }
+
+            return new PropertySerializationInfo
+            {
+                id = propId,
+                propInfo = prop,
+                component = component,
+                getSerializableObject = getSerializableObject,
+                getOriginalObject = getOriginalObject
+            };
+        }
 
         public GameSerializableObjectContainer FindAllSerializableObjects()
         {
@@ -118,87 +180,62 @@ namespace GameSerialization
 
                 foreach (FieldInfo field in fields)
                 {
-                    string fieldId = id + field.Name;
-                    Func<object> getSerializableObject;
-                    Func<SerializationInfo, object> getOriginalObject;
-                    if (field.FieldType.IsSerializable)
+                    FieldSerializationInfo fieldSerializationInfo = FieldToSerializationInfo(field, id, component);
+                    if(null != fieldSerializationInfo)
                     {
-                        getSerializableObject = () => { return field.GetValue(component); };
-                        getOriginalObject = (info) => { return info.GetValue(fieldId, field.FieldType); };
+                        SerializableFields.Add(fieldSerializationInfo);
                     }
-                    else if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ISerializer serializer))
-                    {
-                        getSerializableObject = () => { return serializer.ToSerializable(field.GetValue(component)); };
-                        getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(fieldId, serializer.GetSerializationType())); };
-                    }
-                    else
-                    {
-                        Debug.LogError("Serialization error: " + id + " > Field \"" + field.Name + "\" cannot be serialized or deserialized");
-                        continue;
-                    }
-
-                    SerializableFields.Add(new FieldSerializationInfo
-                    {
-                        id = fieldId,
-                        fieldInfo = field,
-                        component = component,
-                        getSerializableObject = getSerializableObject,
-                        getOriginalObject = getOriginalObject
-                    });
                 }
 
                 foreach (PropertyInfo prop in props)
                 {
-                    string propId = id + prop.Name;
-                    Func<object> getSerializableObject;
-                    Func<SerializationInfo, object> getOriginalObject;
-                    if (prop.PropertyType.IsSerializable)
+                    PropertySerializationInfo propertySerializationInfo = PropToSerializationInfo(prop, id, component);
+                    if(null != propertySerializationInfo)
                     {
-                        getSerializableObject = () => { return prop.GetValue(component); };
-                        getOriginalObject = (info) => { return info.GetValue(propId, prop.PropertyType); };
+                        SerializableProps.Add(propertySerializationInfo);
                     }
-                    else if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ISerializer serializer))
-                    {
-                        getSerializableObject = () => { return serializer.ToSerializable(prop.GetValue(component)); };
-                        getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(propId, serializer.GetSerializationType())); };
-                    }
-                    else
-                    {
-                        Debug.LogError("Serialization error: " + id + " > Property \"" + prop.Name + "\" cannot be serialized or deserialized");
-                        continue;
-                    }
-
-                    SerializableProps.Add(new PropertySerializationInfo
-                    {
-                        id = propId,
-                        propInfo = prop,
-                        component = component,
-                        getSerializableObject = getSerializableObject,
-                        getOriginalObject = getOriginalObject
-                    });
                 }
             }
             return this;
         }
 
+        private void LoadDataToGame(SerializationInfo info)
+        {
+            foreach (IOnLoadGameMethod onLoadGameMethod in OnLoadGameMethods)
+            {
+                onLoadGameMethod.OnLoadGameMethod(info);
+            }
+            foreach (FieldSerializationInfo fieldSerializationInfo in SerializableFields)
+            {
+                fieldSerializationInfo.fieldInfo.SetValue(fieldSerializationInfo.component, fieldSerializationInfo.getOriginalObject(info));
+            }
+            foreach (PropertySerializationInfo propSerializationInfo in SerializableProps)
+            {
+                propSerializationInfo.propInfo.SetValue(propSerializationInfo.component, propSerializationInfo.getOriginalObject(info));
+            }
+        }
+
+        public void SaveDataFromGame(SerializationInfo info)
+        {
+            info.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
+            foreach (IOnSaveGameMethod onSaveGameMethod in OnSaveGameMethods)
+            {
+                onSaveGameMethod.OnSaveGameMethod(info);
+            }
+            foreach (FieldSerializationInfo fieldSerializationInfo in SerializableFields)
+            {
+                info.AddValue(fieldSerializationInfo.id, fieldSerializationInfo.getSerializableObject());
+            }
+            foreach (PropertySerializationInfo propSerializationInfo in SerializableProps)
+            {
+                info.AddValue(propSerializationInfo.id, propSerializationInfo.getSerializableObject());
+            }
+        }
+
         public void LoadSceneFromGameSerializer(GameSerializer serializer)
         {
             SerializationInfo info = serializer.serializationInfo;
-            Action<AsyncOperation> onSceneLoaded = (operation) =>
-            {
-                foreach (IOnLoadGameMethod onLoadGameMethod in OnLoadGameMethods)
-                {
-                    onLoadGameMethod.OnLoadGameMethod(info);
-                }
-                foreach (FieldSerializationInfo fieldSerializationInfo in SerializableFields)
-                {
-                    fieldSerializationInfo.fieldInfo.SetValue(fieldSerializationInfo.component, fieldSerializationInfo.getOriginalObject(info));
-                }
-                foreach (PropertySerializationInfo propSerializationInfo in SerializableProps)
-                {
-                    propSerializationInfo.propInfo.SetValue(propSerializationInfo.component, propSerializationInfo.getOriginalObject(info));
-                }
-            };
+            Action<AsyncOperation> onSceneLoaded = (operation) => LoadDataToGame(info);
 
             int sceneId = (int)info.GetValue("SceneManager_ActiveSceneId", typeof(int));
             if (sceneId != SceneManager.GetActiveScene().buildIndex)
@@ -221,19 +258,7 @@ namespace GameSerialization
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            info.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
-            foreach(IOnSaveGameMethod onSaveGameMethod in serializationContainer.OnSaveGameMethods)
-            {
-                onSaveGameMethod.OnSaveGameMethod(info);
-            }
-            foreach(FieldSerializationInfo fieldSerializationInfo in serializationContainer.SerializableFields)
-            {
-                info.AddValue(fieldSerializationInfo.id, fieldSerializationInfo.getSerializableObject());
-            }
-            foreach (PropertySerializationInfo propSerializationInfo in serializationContainer.SerializableProps)
-            {
-                info.AddValue(propSerializationInfo.id, propSerializationInfo.getSerializableObject());
-            }
+            serializationContainer.SaveDataFromGame(info);
         }
 
         public GameSerializer(GameSerializableObjectContainer serializationContainer)
