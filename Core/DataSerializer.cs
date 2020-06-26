@@ -13,14 +13,14 @@ namespace GameSerialization
 
     public class GameDataSerializer : IDataSerializer
     {
-        private SerializableObjectsContainer serializableObjects;
+        protected SerializableObjectsContainer serializableObjects;
 
         public GameDataSerializer(SerializableObjectsContainer serializableObjects)
         {
             this.serializableObjects = serializableObjects;
         }
 
-        private void LoadDataToGame(SerializationInfo info)
+        protected void LoadDataToGame(SerializationInfo info)
         {
             foreach (IOnLoadGameMethod onLoadGameMethod in serializableObjects.OnLoadGameMethods)
             {
@@ -36,9 +36,8 @@ namespace GameSerialization
             }
         }
 
-        public void SaveDataFromGame(SerializationInfo info)
+        protected void SaveDataFromGame(SerializationInfo info)
         {
-            info.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
             foreach (IOnSaveGameMethod onSaveGameMethod in serializableObjects.OnSaveGameMethods)
             {
                 onSaveGameMethod.OnSaveGameMethod(info);
@@ -53,7 +52,22 @@ namespace GameSerialization
             }
         }
 
-        public void LoadDataFromSerializer(SerializationInfo serializationInfo)
+        public virtual void LoadDataFromSerializer(SerializationInfo serializationInfo)
+        {
+            LoadDataToGame(serializationInfo);
+        }
+
+        public virtual void SaveDataToSerializer(SerializationInfo serializationInfo)
+        {
+            SaveDataFromGame(serializationInfo);
+        }
+    }
+
+    public class SceneDataSerializer : GameDataSerializer
+    {
+        public SceneDataSerializer(SerializableObjectsContainer serializableObjects) : base(serializableObjects) {}
+
+        public override void LoadDataFromSerializer(SerializationInfo serializationInfo)
         {
             if (null == serializationInfo) return;
 
@@ -75,8 +89,9 @@ namespace GameSerialization
             }
         }
 
-        public void SaveDataToSerializer(SerializationInfo serializationInfo)
+        public override void SaveDataToSerializer(SerializationInfo serializationInfo)
         {
+            serializationInfo.AddValue("SceneManager_ActiveSceneId", SceneManager.GetActiveScene().buildIndex);
             SaveDataFromGame(serializationInfo);
         }
     }

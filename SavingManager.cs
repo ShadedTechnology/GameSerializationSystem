@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GameSerialization;
+using System.Runtime.Serialization;
+using System;
+using UnityEngine.SceneManagement;
 
 public class SavingManager : MonoBehaviour
 {
@@ -14,11 +17,11 @@ public class SavingManager : MonoBehaviour
 
     public void SaveGame(string saveName)
     {
-        SerializationHandler.SaveGame(saveName, new GameDataSerializer(serializableObjectContainer));
+        SerializationHandler.SaveGame(saveName, new SceneDataSerializer(serializableObjectContainer));
     }
 
     public void LoadGame(string saveName)
     {
-        SerializationHandler.LoadGame(saveName, new GameDataSerializer(serializableObjectContainer));
+        SerializationHandler.LoadGame(saveName, new SceneDataSerializer(serializableObjectContainer));
     }
 }
