@@ -5,7 +5,9 @@ using System.Runtime.Serialization;
 using UnityEngine;
 using GameSerialization;
 
-// made by Michał Warzecha 28.08.2019
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
 
 public class TransformSaver : MonoBehaviour
 {

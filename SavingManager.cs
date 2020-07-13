@@ -6,6 +6,10 @@ using System.Runtime.Serialization;
 using System;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
+
 public class SavingManager : MonoBehaviour
 {
     private SerializableObjectsContainer serializableObjectContainer;

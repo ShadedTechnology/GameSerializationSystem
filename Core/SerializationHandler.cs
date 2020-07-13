@@ -4,7 +4,9 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 
-// made by Michał Warzecha 28.08.2019
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
 
 namespace GameSerialization
 {

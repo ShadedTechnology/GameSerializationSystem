@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using UnityEngine;
 
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
+
 namespace GameSerialization
 {
     [AttributeUsage(AttributeTargets.Field, Inherited = false)]
@@ -41,12 +45,6 @@ namespace GameSerialization
 
     static class SerializationHelper
     {
-        public static Dictionary<Type, ITypeSerializer> serializationDictionary = new Dictionary<Type, ITypeSerializer>()
-        {
-            { typeof(Vector3), new Vector3Serializer()},
-            { typeof(Quaternion), new QuaternionSerializer()}
-        };
-
         public static string GetComponentPath(MonoBehaviour component)
         {
             return component.transform.GetPath() + "/" + component.GetType().ToString();

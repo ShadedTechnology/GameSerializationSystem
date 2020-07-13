@@ -6,6 +6,10 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using UnityEngine;
 
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
+
 namespace GameSerialization
 {
     public class GameDataCollector : MonoBehaviour
@@ -20,7 +24,7 @@ namespace GameSerialization
                 getSerializableObject = () => { return field.GetValue(component); };
                 getOriginalObject = (info) => { return info.GetValue(fieldId, field.FieldType); };
             }
-            else if (SerializationHelper.serializationDictionary.TryGetValue(field.FieldType, out ITypeSerializer serializer))
+            else if (SerializableTypes.serializationDictionary.TryGetValue(field.FieldType, out ITypeSerializer serializer))
             {
                 getSerializableObject = () => { return serializer.ToSerializable(field.GetValue(component)); };
                 getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(fieldId, serializer.GetSerializationType())); };
@@ -51,7 +55,7 @@ namespace GameSerialization
                 getSerializableObject = () => { return prop.GetValue(component); };
                 getOriginalObject = (info) => { return info.GetValue(propId, prop.PropertyType); };
             }
-            else if (SerializationHelper.serializationDictionary.TryGetValue(prop.PropertyType, out ITypeSerializer serializer))
+            else if (SerializableTypes.serializationDictionary.TryGetValue(prop.PropertyType, out ITypeSerializer serializer))
             {
                 getSerializableObject = () => { return serializer.ToSerializable(prop.GetValue(component)); };
                 getOriginalObject = (info) => { return serializer.FromSerializable(info.GetValue(propId, serializer.GetSerializationType())); };

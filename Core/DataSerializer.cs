@@ -3,6 +3,10 @@ using System.Runtime.Serialization;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
+
 namespace GameSerialization
 {
     public interface IDataSerializer

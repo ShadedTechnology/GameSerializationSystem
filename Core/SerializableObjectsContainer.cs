@@ -6,6 +6,10 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using UnityEngine;
 
+/// <summary>
+/// <author>Michał Warzecha</author>
+/// </summary>
+
 namespace GameSerialization
 {
     public class FieldSerializationInfo
