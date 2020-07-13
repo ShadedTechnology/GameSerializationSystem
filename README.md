@@ -1,6 +1,6 @@
 # Game Serialization System
 
-Game state serialization system for Unity game engine.
+Game data serialization system for Unity game engine.
 
 ## How to use:
 
