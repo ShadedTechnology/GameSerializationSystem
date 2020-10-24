@@ -13,19 +13,21 @@ using UnityEngine.SceneManagement;
 public class SavingManager : MonoBehaviour
 {
     private SerializableObjectsContainer serializableObjectContainer;
+    private SceneDataSerializer sceneSerializer;
     
     private void Start()
     {
         serializableObjectContainer = GameDataCollector.FindAllSerializableObjects();
+        sceneSerializer = new SceneDataSerializer(serializableObjectContainer);
     }
 
     public void SaveGame(string saveName)
     {
-        SerializationHandler.SaveGame(saveName, new SceneDataSerializer(serializableObjectContainer));
+        SerializationHandler.SaveData(saveName, sceneSerializer);
     }
 
     public void LoadGame(string saveName)
     {
-        SerializationHandler.LoadGame(saveName, new SceneDataSerializer(serializableObjectContainer));
+        SerializationHandler.LoadData(saveName, sceneSerializer);
     }
 }

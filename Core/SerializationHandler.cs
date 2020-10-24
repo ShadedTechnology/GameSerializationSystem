@@ -13,17 +13,17 @@ namespace GameSerialization
     [Serializable]
     public class SerializerEnvelope : ISerializable
     {
-        private IDataSerializer dataSerializer;
+        private Action<SerializationInfo> onSaveMethod;
         public SerializationInfo serializationInfo;
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            dataSerializer.SaveDataToSerializer(info);
+            onSaveMethod(info);
         }
 
-        public SerializerEnvelope(IDataSerializer dataSerializer)
+        public SerializerEnvelope(Action<SerializationInfo> onSaveMethod)
         {
-            this.dataSerializer = dataSerializer;
+            this.onSaveMethod = onSaveMethod;
         }
 
         public SerializerEnvelope(SerializationInfo info, StreamingContext context)
@@ -42,8 +42,13 @@ namespace GameSerialization
             string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
             return (File.Exists(path));
         }
-    
-        public static void SaveGame(string saveName, IDataSerializer dataSerializer)
+
+        public static void SaveData(string saveName, IDataSerializer dataSerializer, bool append = false)
+        {
+            SaveData(saveName, dataSerializer.SaveDataToSerializer, append);
+        }
+
+        public static void SaveData(string saveName, Action<SerializationInfo> onSaveMethod, bool append = false)
         {
             string path = Application.persistentDataPath + saveFolder;
             if (!Directory.Exists(path))
@@ -51,31 +56,20 @@ namespace GameSerialization
                 Directory.CreateDirectory(path);
             }
             path += saveName + ".dat";
-            using (FileStream fileStream = new FileStream(path, FileMode.Create))
+            using (FileStream fileStream = new FileStream(path, append ? FileMode.Append : FileMode.Create))
             {
                 BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(fileStream, new SerializerEnvelope(dataSerializer));
+                formatter.Serialize(fileStream, new SerializerEnvelope(onSaveMethod));
                 fileStream.Close();
             }
         }
 
-        public static void SaveGameAppend(string saveName, IDataSerializer dataSerializer)
+        public static void LoadData(string saveName, IDataSerializer dataSerializer)
         {
-            string path = Application.persistentDataPath + saveFolder;
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-            path += saveName + ".dat";
-            using (FileStream fileStream = new FileStream(path, FileMode.Append))
-            {
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(fileStream, new SerializerEnvelope(dataSerializer));
-                fileStream.Close();
-            }
+            LoadData(saveName, dataSerializer.LoadDataFromSerializer);
         }
 
-        public static void LoadGame(string saveName, IDataSerializer dataSerializer)
+        public static void LoadData(string saveName, Action<SerializationInfo> onLoadMethod)
         {
             string path = Application.persistentDataPath + saveFolder + saveName + ".dat";
             if (File.Exists(path))
@@ -84,7 +78,7 @@ namespace GameSerialization
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
                     SerializerEnvelope serializerEnvelope = (SerializerEnvelope)formatter.Deserialize(fileStream);
-                    dataSerializer.LoadDataFromSerializer(serializerEnvelope.serializationInfo);
+                    onLoadMethod(serializerEnvelope.serializationInfo);
                     fileStream.Close();
                 }
             }

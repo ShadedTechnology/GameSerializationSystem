@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace GameSerialization
 {
-    public class GameDataCollector : MonoBehaviour
+    public class GameDataCollector
     {
         public static FieldSerializationInfo FieldToSerializationInfo(FieldInfo field, string id, MonoBehaviour component)
         {
