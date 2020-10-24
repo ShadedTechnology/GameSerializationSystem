@@ -12,7 +12,9 @@ namespace GameSerialization
     {
         public static Dictionary<Type, ITypeSerializer> serializationDictionary = new Dictionary<Type, ITypeSerializer>()
         {
+            { typeof(Vector2), new Vector2Serializer()},
             { typeof(Vector3), new Vector3Serializer()},
+            { typeof(Vector4), new Vector4Serializer()},
             { typeof(Quaternion), new QuaternionSerializer()}
         };
     }
